@@ -1,0 +1,436 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" debug="true">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Dropsend API tester</title>
+	<link rel="stylesheet" href="common.css" />
+	<link rel="icon" href="accept.png" sizes="16x16" />
+	<script language='javascript' src='jquery-1.3.2.js'></script>
+	<style>
+	.api_action {
+		padding: 10px;
+	}
+	th {
+		text-align: right;
+	}
+	h3 {
+		color: #379;
+		border-bottom: 1px dashed #379;
+		width: 300px;
+	}
+	</style>
+	
+	<script>
+	/*global $*/
+
+	function add_another_file(link) {
+		var $tr = $(link).parent();
+		console.log($tr);
+		var n = $tr.parent('form').find('input').size();
+		$tr.before('<tr><th></th><td><input type="file" name="file' + n + '" /></td></tr>');
+	}
+
+	function ajax_upload(form_element, callbacks) {
+		var n = 'f' + Math.floor(Math.random() * 99999);
+		form_element.setAttribute('target', n);
+		var div = document.createElement('DIV');
+		div.innerHTML = '<iframe style="display:none" src="about:blank" id="' + n + '" name="' + n + '"><\/iframe>';
+		document.body.appendChild(div);
+		var iframe = div.firstChild;
+		iframe.onload = function () {
+			var doc = iframe.contentDocument || iframe.contentWindow.document;
+			if (doc.location.href === "about:blank") {
+				return;
+			}
+			if (typeof iframe.on_complete === 'function') {
+				iframe.on_complete(doc.body.innerHTML);
+			}
+		};
+		if (callbacks) {
+			iframe.on_complete = callbacks.on_complete;
+			if (typeof callbacks.on_start === 'function') {
+				return callbacks.on_start();
+			}
+		}
+		return false;
+	}
+	
+	function add_response(el, html) {
+		var $el = $(el);
+		var $resp = $el.find('div.response');
+		if ($resp.size() === 0) {
+			$resp = $('<div class="response"><\/div>');
+			$el.append($resp);
+		}
+		$resp.html(html);
+	}
+	$(function () {
+		$('form').each(function () {
+			var form = this;
+			if ($(form).hasClass('ignoreme')) {
+				return true;
+			}
+			ajax_upload(form, {
+				on_start: function () {
+					//$(form).find('input').attr('disabled', true);
+				},
+				on_complete: function (r) {
+					//$(form).find('input').attr('disabled', false);
+					add_response(form.parentNode, r);
+				}
+			});
+		});
+		
+		$('a').click(function () {
+			var $a = $(this);
+			if ($a.hasClass('ignoreme')) {
+				return true;
+			}
+			$.get($a.attr('href'), function (r) {
+				try {
+					add_response($a.parent(), r);
+				} catch (e) {
+					console.log(e);
+				}
+			});
+			return false;
+		});
+
+		/* $('h2.page_section').each(function (i, h2) {
+			var $h2 = $(h2);
+			console.log($h2);
+			var $section = $h2.next('div');
+			if ($h2.attr('id') !== location.hash.substring(1)) {
+				$section.hide();
+			}
+		}); */
+	});
+	</script>
+	
+</head>
+<body>
+<div class="wrap">
+	<div id="header" style="clear: both;">
+		<div style="float:left;">
+			dropsend api client
+		</div>
+		<div style="float:right;padding-right: 5px;">
+			version 0.0.1
+		</div>
+	</div>
+	<div class="contentdiv">
+		<h2 class="page_section">Common</h2>
+		<div class="api_action">
+			<a class="ignoreme" href="?action=unauthorize">Disconnect Dropsend</a>
+		</div>
+		<h2 class="page_section">Storage</h2>
+		<div id="storage_api">
+			<div class="api_action">
+				<h3>List storage folders</h3>
+				<form action="?action=storage/get_folders" method="POST">
+					<label>Parent folder_id (leave empty for root)</label><br/>
+					<input type="text" name="folder_id" />
+					<input type="submit" value="Request list of folders" />
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>List storage files</h3>
+				<form action="?action=storage/get_files" method="POST">
+					<label>Parent folder_id (leave empty for root)</label><br/>
+					<input type="text" name="folder_id" />
+					<input type="submit" value="Request list of files" />
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>File info</h3>
+				<form action="?action=storage/get_files" method="POST">
+					<label>file_id</label><br/>
+					<input type="text" name="file_id" />
+					<input type="submit" value="Request file info" />
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>Download file(s)</h3>
+				<form class="ignoreme" action="?action=storage/download_files" method="POST">
+					<label>file_id</label><br/>
+					<input type="text" name="file_id" />
+					<input type="submit" value="Download file" />
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>Root folder info</h3>
+				<a href="?action=storage/get_root_folder">Get root folder info</a>
+			</div>
+			<div class="api_action">
+				<form action="?action=storage/create_folder" method="POST">
+					<h3>Create folder</h3>
+					<table>
+						<tr>
+							<th><label>Name</label></th>
+							<td><input type="text" name="name" /></td>
+						</tr>
+						<tr>
+							<th><label>Description</label></th>
+							<td><input type="text" name="description" /></td>
+						</tr>
+						<tr>
+							<th><label>Parent folder_id  (leave empty for root)</label></th>
+							<td><input type="text" name="parent_folder_id" /></td>
+						</tr>
+						<tr>
+							<th><label>Is Dropbox?</label></th>
+							<td><input type="checkbox" name="is_dropbox" value="1"/></td>
+						</tr>
+						<tr>
+							<th></th>
+							<td><input type="submit" value="Create" /></td>
+						</tr>
+					</table>
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>Upload file</h3>
+				<form action="?action=storage/upload_file" enctype="multipart/form-data" method="POST">
+					<label>Local file</label><br/>
+					<input type="file" name="file" /><br/>
+					<label>Parent folder_id</label><br/>
+					<input type="text" name="folder_id" />
+					<input type="submit" value="Start upload" />
+				</form>
+			</div>
+		</div>
+		<h2 class="page_section">Contacts and Mailing Lists</h2>
+		<div id="contacts_api">
+			<div class="api_action">
+				<h3>Addressbook entries</h3>
+				<a href="?action=addressbook/entries">Get addressbook entries</a>
+			</div>
+			<div class="api_action">
+				<h3>Add addressbook entry</h3>
+				<form action="?action=addressbook/add_contact" method="post">
+					<table>
+						<tr>
+							<th><label><strong>Email *</strong></label></th>
+							<td><input type="text" name="email" /></td>
+						</tr>
+						<tr>
+							<th><label><strong>First name</strong></label></th>
+							<td><input type="text" name="firstname" /></td>
+						</tr>
+						<tr>
+							<th><label><strong>Last name</strong></label></th>
+							<td><input type="text" name="lastname" /></td>
+						</tr>
+						<tr>
+							<th><label><strong>Company</strong></label></th>
+							<td><input type="text" name="company" /></td>
+						</tr>
+						<tr>
+							<th></th>
+							<td><input type="submit" value="Add contact to addressbook" /></td>
+						</tr>
+					</table>
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>Mailing lists</h3>
+				<a href="?action=addressbook/mailing_lists">Fetch mailing lists</a>
+			</div>
+			<div class="api_action">
+				<h3>Mailing list info</h3>
+				<form action="?action=addressbook/get_mailing_list" method="post">
+					<label>Mailing list id</label><br/>
+					<input type="text" name="list_id" />
+					<input type="submit" value="Fetch Mailing list object" />
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>Create new mailing list</h3>
+				<form action="?action=addressbook/create_mailing_list" method="post">
+					<label>Mailing list name</label><br/>
+					<input type="text" name="name" />
+					<input type="submit" value="Create Mailing list" />
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>Delete mailing list</h3>
+				<form action="?action=addressbook/delete_mailing_list" method="post">
+					<label>Mailing list id(s)</label><br/>
+					<span class="comment">May be comma separated ids</span>
+					<input type="text" name="list_id" />
+					<input type="submit" value="Delete Mailing list" />
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>Modify mailing list</h3>
+				<form action="?action=addressbook/modify_mailing_list" method="post">
+					<label>Mailing list id</label><br/>
+					<input type="text" name="list_id" /><br/>
+					<label>Mailing list name</label><br/>
+					<input type="text" name="name" /><br/>
+					<input type="submit" value="Modify Mailing list" />
+				</form>
+			</div>
+		</div>
+		<h2 class="page_section">File sender</h2>
+		<div id="sender_api">
+			<div class="api_action">
+				<form action="?action=sender/send_file" method="POST" enctype="multipart/form-data">
+					<table>
+						<tr>
+							<th><label>File description</label></th>
+							<td><input type="text" name="file_description" /></td>
+						</tr>
+						<tr>
+							<th><label>File *</label></th>
+							<td><input type="file" name="file" /></td>
+						</tr>
+						<tr>
+							<td></td>
+							<td><a class="ignoreme" href="#" onclick="add_another_file(this); return false;">Add another file</a></td>
+						</tr>
+						<tr>
+							<th><label>Recipients *</label></th>
+							<td><input type="text" name="recipients" /></td>
+						</tr>
+						<tr>
+							<th><label>Subject</label></th>
+							<td><input type="text" name="subject" /></td>
+						</tr>
+						<tr>
+							<th><label>Message</label></th>
+							<td><textarea name="message" cols="40" rows="6"></textarea></td>
+						</tr>
+						<tr>
+							<th><label>Password</label></th>
+							<td><input type="text" name="password" /></td>
+						</tr>
+						<tr>
+							<th><label>Mailing list[s, comma separated ids]</label></th>
+							<td><input type="text" name="ml" /></td>
+						</tr>
+						<tr>
+							<th></th>
+							<td><input type="submit" value="Send file using your Dropsend account" /></td>
+						</tr>
+					</table>
+				</form>
+			</div>
+		</div>
+		<h2 class="page_section">Request file</h2>
+		<div id="request_api">
+			<div class="api_action">
+				<h3>Requests</h3>
+				<a href="?action=request/index">get list of all requests</a>
+			</div>
+			<div class="api_action">
+				<h3>Requests</h3>
+				<a href="?action=request/get_dropbox_folders">get list of all dropbox folders</a>
+			</div>
+			<div class="api_action">
+				<h3>Request info</h3>
+				<form action="?action=request/info" method="POST">
+					<input type="text" name="request_id" />
+					<input type="submit" value="get request info" />
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>Create Request</h3>
+				<form action="?action=request/create" method="POST">
+					<table>
+						<tr>
+							<th>Request type</th>
+							<td>
+								<input type="radio" name="request_type" value="1" id="personal_request" />
+								<label for="personal_request">Personal request (email required)</label>
+								<input type="radio" name="request_type" value="2" id="mass_request" />
+								<label for="mass_request">Public request</label>
+							</td>
+						</tr>
+						<tr>
+							<th>Subject (for personal only)</th>
+							<td>
+								<input type="text" name="subject" />
+							</td>
+						</tr>
+						<tr>
+							<th>Email (* for personal only)</th>
+							<td><input type="text" name="recipients" /></td>
+						</tr>
+						<tr>
+							<th>Message (for personal only)</th>
+							<td><textarea cols="10" rows="4" name="message"></textarea></td>
+						</tr>
+						<tr>
+							<th>Upload to folder id</th>
+							<td><input type="text" name="folder_id" /></td>
+						</tr>
+						<tr>
+							<th>Notifications email</th>
+							<td><input type="text" name="notifications_email" /></td>
+						</tr>
+						<tr>
+							<th></th>
+							<td><input type="submit" value="Send request" /></td>
+						</tr>
+					</table>
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>Modify Request</h3>
+				<form action="?action=request/update" method="POST">
+					<table>
+						<tr>
+							<th>request ID</th>
+							<td><input type="text" name="request_id" /></td>
+						</tr>
+						<tr>
+							<th>Request type</th>
+							<td>
+								<input type="radio" name="request_type" value="1" id="personal_request2" />
+								<label for="personal_request2">Personal request (email required)</label>
+								<input type="radio" name="request_type" value="2" id="mass_request2" />
+								<label for="mass_request2">Public request</label>
+							</td>
+						</tr>
+						<tr>
+							<th>Subject (for personal only)</th>
+							<td>
+								<input type="text" name="subject" />
+							</td>
+						</tr>
+						<tr>
+							<th>Email (* for personal only)</th>
+							<td><input type="text" name="recipients" /></td>
+						</tr>
+						<tr>
+							<th>Message (for personal only)</th>
+							<td><textarea cols="10" rows="4" name="message"></textarea></td>
+						</tr>
+						<tr>
+							<th>Upload to folder id</th>
+							<td><input type="text" name="folder_id" /></td>
+						</tr>
+						<tr>
+							<th>Notifications email</th>
+							<td><input type="text" name="notifications_email" /></td>
+						</tr>
+						<tr>
+							<th></th>
+							<td><input type="submit" value="Save request" /></td>
+						</tr>
+					</table>
+				</form>
+			</div>
+			<div class="api_action">
+				<h3>Remove request</h3>
+				<form action="?action=request/remove" method="POST">
+					<input type="text" name="request_id" />
+					<input type="submit" value="get request info" />
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+</body>
+</html>
